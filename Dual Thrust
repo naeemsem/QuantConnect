@@ -1,0 +1,64 @@
+from datetime import datetime
+import decimal
+
+class DualThrustAlgorithm(QCAlgorithm):
+
+    def Initialize(self):
+        
+        '''Initialise the data and resolution required, as well as the cash and start-end dates for your algorithm. All algorithms must initialized.'''
+        
+        self.SetStartDate(2004, 1, 1) #start date
+        self.SetEndDate(datetime.now()) # end day today
+        self.SetCash(100000) # capital
+        equity = self.AddSecurity(SecurityType.Equity, "SPY", Resolution.Hour) # init spy data
+        self.syl = equity.Symbol # set syl var to symbol name
+        
+        # schedule an event to fire every trading day for a security at open
+        # the time rule here tells it to fire when market open 
+        
+        self.Schedule.On(self.DateRules.EveryDay(self.syl),self.TimeRules.AfterMarketOpen(self.syl,0),Action(self.SetSignal))
+        self.selltrig = None # sell trigger 
+        self.buytrig = None #buy trigger
+        self.currentopen = None # checks if in trade
+    
+    def SetSignal(self): # signal method to trigger a trade
+        history = self.History([self.syl.Value], 4, Resolution.Daily) # getting 4 previous days data
+    
+        k1 = 0.5
+        k2 = 0.5
+        self.high = history.loc[self.syl.Value]['high'] # need this to loacte the highs of the period 
+        self.low = history.loc[self.syl.Value]['low'] # need this to loacte the lows of the period 
+        self.close = history.loc[self.syl.Value]['close'] # need this to loacte the closes of the period 
+        
+        self.currentopen = self.Portfolio[self.syl].Price # price spy opened at current day
+        
+        HH, HC, LC, LL = max(self.high), max(self.close), min(self.close), min(self.low) # locate the highest high, highest close, lowest low and lowest close
+        if HH - LC >= HC - LL:  # creates signal range for trigger function 
+            signalrange = HH - LC 
+        else:
+            signalrange = HC - LL
+        
+        self.selltrig = float(self.currentopen) - float(k1) * signalrange #sell trigger calculates sell limit price
+        self.buytrig = float(self.currentopen) + float(k2) * signalrange  #buy trigger calculates buy limit price  
+    
+    def OnData(self,data):
+        
+        '''OnData event is the primary entry point for your algorithm. Each new data point will be pumped in here.'''
+        
+        holdings = self.Portfolio[self.syl].Quantity # spy holdings
+        
+        if self.Portfolio[self.syl].Price >= self.selltrig: # if bought price greater than sell limit price
+            if holdings >= 0: 
+                self.SetHoldings(self.syl, 0.8) # buy 80 % of portf for spy
+            else:
+                self.Liquidate(self.syl) # close holdings 
+                self.SetHoldings(self.syl, 0.8) # buy 80% spy
+                
+        elif self.Portfolio[self.syl].Price < self.selltrig: # if portf buy price less than sell trigger 
+             if holdings >= 0: # liquidate holdings and short 80% on spy
+                self.Liquidate(self.syl)
+                self.SetHoldings(self.syl, -0.8)
+             else:
+                self.SetHoldings(self.syl, -0.8)# short 80% on spy
+                
+        self.Log("open: "+ str(self.currentopen)+" buy: "+str(self.buytrig)+" sell: "+str(self.selltrig))
