@@ -1,0 +1,29 @@
+import numpy as np
+from datetime import datetime
+
+class QCUSellInMay(QCAlgorithm):
+    '''Basic template algorithm simply initializes the date range and cash'''
+    
+    def Initialize(self):
+  # Code Automatically Generated  
+        
+        '''Initialise the data and resolution required, as well as the cash and start-end dates for your algorithm. All algorithms must initialized.'''
+        self.symbol = "XTR"
+        self.SetStartDate(2011,10, 7)  #Set Start Date
+        self.SetEndDate(2013,10,11)    #Set End Date
+        self.SetCash(10000)           #Set Strategy Cash
+        # Find more symbols here: http://quantconnect.com/data
+        self.AddEquity(self.symbol, Resolution.Minute)
+        self.Debug("numpy test >>> print numpy.pi: " + str(np.pi))
+
+    def OnData(self, data):
+        '''OnData event is the primary entry point for your algorithm. Each new data point will be pumped in here.
+
+        Arguments:
+            data: Slice object keyed by symbol containing the stock data
+        '''
+        self.Debug(str(self.Time) + " | last trading day of the month")
+        if (datetime.month == 5):
+            order(self.symbol, 0)
+       # else if (datetime.month == 11):
+          #  order(self.symbol, 100)
