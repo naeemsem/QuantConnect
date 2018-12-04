@@ -1,0 +1,27 @@
+import numpy as np
+
+
+class spyovernight(QCAlgorithm):
+    '''Basic template algorithm simply initializes the date range and cash'''
+
+    def Initialize(self):
+        '''Initialise the data and resolution required, as well as the cash and start-end dates for your algorithm. All algorithms must initialized.'''
+
+        self.SetStartDate(2013,10, 7)  #Set Start Date
+        self.SetEndDate(2018,10,11)    #Set End Date
+        self.SetCash(100000)           #Set Strategy Cash
+        # Find more symbols here: http://quantconnect.com/data
+        self.spy = self.AddEquity("SPY", Resolution.Hour).Symbol # init spy hourly data and storing symbol to self.spy
+        self.rsi = self.RSI("SPY", 2, MovingAverageType.Simple, Resolution.Daily) # creating rsi for spy
+        self.SetBrokerageModel(BrokerageName.InteractiveBrokersBrokerage) # set brokerage model to IB
+        #self.sma = self.SMA("SPY", 20, MovingAverageType.Simple, Resolution.Daily) # creating rsi
+        self.Schedule.On(self.DateRules.EveryDay(self.spy), self.TimeRules.AfterMarketOpen("SPY", 15), self.EverydayAfterMarketOpen) # scheduling sell on market open
+        self.Schedule.On(self.DateRules.EveryDay(self.spy), self.TimeRules.BeforeMarketClose("SPY", 15), self.EverydayBeforeMarketClose) # secheduling buy on close
+    
+    def EverydayAfterMarketOpen(self):
+        if self.Portfolio.Invested: 
+            self.Liquidate()
+    
+    def EverydayBeforeMarketClose(self):
+        if self.rsi <= 10: # see if rsi2 < 10 and sma100 < close and not in position buy 
+            self.SetHoldings("SPY", 1)
